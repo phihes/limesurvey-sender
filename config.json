@@ -1,0 +1,12 @@
+{
+	"default": {
+		"url": "https://xxx.limequery.com/admin/remotecontrol",
+		"survey_id": -1,
+		"batch_size": 100,
+		"wait": 30,
+		"max_batches": 100000,
+		"min_days_between": 14,
+		"max_reminders": 1,
+		"date_format": "%d.%m.%Y"		
+	}
+}
