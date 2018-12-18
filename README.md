@@ -1,5 +1,5 @@
 # limesurvey-sender
-A CLI for batch-sending invitations and reminders for limesurveys. Used to avoid SMTP-server overload and time-consuming manual usage of limesurvey webUI. Includes limesurveyrc2api from https://github.com/lindsay-stevens/limesurveyrc2api (+own implementations of missing methods).
+A CLI for batch-sending invitations and reminders for limesurveys. Used to avoid SMTP-server overload and time-consuming manual usage of limesurvey webUI. Includes limesurveyrc2api from https://github.com/lindsay-stevens/limesurveyrc2api (+own implementations of missing methods). Option profiles can be specified in config.json for ease of use.
 
 
 ```
@@ -7,8 +7,11 @@ Usage:
   send.py list --url <url>
   send.py invite --url <url> --survey-id <survey-id> [options]
   send.py remind --url <url> --survey-id <survey-id> [options]
+  send.py <action> --profile <profile> [options]
 
 Options:
+  -p PROFILE --profile PROFILE      name of profile in config.json, will override default settings
+                                    arguments provided in command line will be used if they deviate from default values
   -u URL --url URL                  url of limesurvey api
   -s ID --survey-id ID              ID of the targeted survey in limesurvey [default:-1]
   -b SIZE --batch-size SIZE         how many emails to send in one batch [default:100]
