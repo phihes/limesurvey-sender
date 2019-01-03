@@ -7,6 +7,6 @@
 		"max_batches": 100000,
 		"min_days_between": 14,
 		"max_reminders": 1,
-		"date_format": "%d.%m.%Y"		
-	}
+		"date_format": "%Y-%m-%d %H:%M"		
+	}	
 }

@@ -25,13 +25,13 @@ profiles = {}
 default = {}
 settings = {}
 
-def days_between(d1, d2):
-    d1 = datetime.strptime(d1, settings['date_format'])
-    d2 = datetime.strptime(d2, settings['date_format'])
+def days_between(d1, d2, date_format):
+    d1 = dt.strptime(d1, date_format)
+    d2 = dt.strptime(d2, date_format)
     diff = abs((d2 - d1).days)
-    logger.debug("Calculated days between for {} and {} as {}".format(
-        d1, d2, diff
-    ))
+    #logger.debug("Calculated days between for {} and {} as {}".format(
+    #    d1, d2, diff
+    #))
     return diff
 
 def ok_to_send(question, default="no"):
@@ -73,30 +73,45 @@ def get_uninvited(api, survey_id):
     return list(participants.keys()), participants
 
 def get_unreminded(api, survey_id, min_days_between, max_reminders):
+    global settings
     participants = {}
 
-    try:
-        participants = {p['tid']:p for p in api.token.list_participants(
-            survey_id,
-            limit=100000,
-            ignore_token_used=True,
-            attributes=['emailstatus','sent', 'remindercount', 'usesleft', 'remindersent'],
-            conditions={
-                'emailstatus': 'OK',
-                'remindercount':'<{}'.format(max_reminders),
-                'min_days_between': min_days_between
-            })
-            if(
-                p['emailstatus']=='OK' and
-                int(p['usesleft'])>0 and
-                int(p['remindercount'])<max_reminders and
-                (p['remindersent']=='N' or days_between(p['remindersent'], dt.now().strftime(settings['date_format']))>=min_days_between)
-        )}
+    for rem in range(max_reminders):
+        try:
+            print(rem)
+            participants.update({p['tid']:p for p in api.token.list_participants(
+                survey_id,
+                limit=1000000,
+                ignore_token_used=True,
+                attributes=['emailstatus','sent', 'remindercount', 'usesleft', 'remindersent'],
+                conditions={
+                    'emailstatus': 'OK',
+                    'remindercount':rem,
+                    #'min_days_between': min_days_between,
+                    'usesleft': 1
+                })
+                if(
+                    p['emailstatus']=='OK' and
+                    int(p['usesleft'])>0 and
+                    int(p['remindercount'])<max_reminders and
 
-    except LimeSurveyError as e:
-        if not e.message == "Error during query | list_participants | No survey participants found.":
-            logger.error(e.message)
-            sys.exit(1)
+                    # weirdly, the field 'remindersent' can either contain Y/N or the 
+                    # date of the last reminder sent...
+                    (p['remindersent']=='N' or p['remindersent']=='Y' or
+                        days_between(
+                            p['remindersent'],
+                            dt.now().strftime(settings['date_format']),
+                            settings['date_format']
+                        )>=min_days_between)
+            )})
+            print(len(participants))
+
+        except LimeSurveyError as e:
+            if not e.message == "Error during query | list_participants | No survey participants found.":
+                logger.error(e.message)
+                sys.exit(1)
+
+    logger.info(len(participants.keys()))
 
     return list(participants.keys()), participants
 
@@ -298,6 +313,7 @@ def send_reminders(url, survey_id, batch_size, wait, max_batches, min_days_betwe
 
 
 def main():
+    global settings
 
     try:
         with open("config.json") as default_json:
@@ -343,26 +359,36 @@ def main():
             max_reminders=args.max_reminders,
             date_format=args.date_format
         )
+
+    logger.info(args.action + " with settings:")
+    for s in ["{}={}".format(k,v) for k,v in settings.items()]:
+        logger.info(s)
     
     if args.action == "invite":
-        send_invitations(
-            url=settings['url'],
-            survey_id=settings['survey_id'],
-            batch_size=settings['batch_size'],
-            wait=settings['wait'],
-            max_batches=settings['max_batches']
-        )
+        if settings['survey_id']==-1:
+            logger.error("No survey selected.")
+        else:
+            send_invitations(
+                url=settings['url'],
+                survey_id=settings['survey_id'],
+                batch_size=settings['batch_size'],
+                wait=settings['wait'],
+                max_batches=settings['max_batches']
+            )
 
     elif args.action == "remind":
-        send_reminders(
-            url=settings['url'],
-            survey_id=settings['survey_id'],
-            batch_size=settings['batch_size'],
-            wait=settings['wait'],
-            max_batches=settings['max_batches'],
-            min_days_between=settings['min_days_between'],
-            max_reminders=settings['max_reminders']            
-        )
+        if settings['survey_id']==-1:
+            logger.error("No survey selected.")
+        else:        
+            send_reminders(
+                url=settings['url'],
+                survey_id=settings['survey_id'],
+                batch_size=settings['batch_size'],
+                wait=settings['wait'],
+                max_batches=settings['max_batches'],
+                min_days_between=settings['min_days_between'],
+                max_reminders=settings['max_reminders']            
+            )
 
     elif args.action == "list":
         surveys = connect(settings['url'], survey_id=-1)
